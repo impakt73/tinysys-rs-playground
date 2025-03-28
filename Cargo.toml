@@ -1,0 +1,17 @@
+[package]
+name = "tinysys-rs-demo"
+version = "0.1.0"
+authors = ["Gregory Mitrano <gregory.mitrano@gmail.com>"]
+edition = "2024"
+
+[dependencies]
+tinysys_sys = { git = "https://github.com/Chris--B/tinysys-sys.git" }
+riscv = { version = "0.13.0", features = ["critical-section-single-hart"] }
+embedded-alloc = "0.6.0"
+panic-halt = "1"
+
+[[bin]]
+name = "tinysys-rs-demo"
+test = false
+doctest = false
+bench = false
