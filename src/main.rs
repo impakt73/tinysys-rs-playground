@@ -1,36 +1,29 @@
 #![no_std]
 #![no_main]
-#![allow(static_mut_refs)]
-
-extern crate panic_halt;
-
-use alloc::{alloc::alloc, slice};
-use riscv as _;
 
 extern crate alloc;
+extern crate panic_halt;
+extern crate riscv;
 
 use embedded_alloc::LlffHeap as Heap;
+use tinysys_sys::*;
+
+use core::arch::asm;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use core::arch::asm;
-
-use tinysys_sys::*;
-
-#[unsafe(no_mangle)]
-pub extern "C" fn malloc(size: usize) -> *mut u8 {
-    unsafe { alloc(alloc::alloc::Layout::from_size_align_unchecked(size, 8)) }
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     {
+        #![allow(static_mut_refs)]
         use core::mem::MaybeUninit;
+
         const HEAP_SIZE: usize = 4 * 1024 * 1024;
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
+    dbg!(HEAP.free() / 1024);
 
     unsafe {
         let mut video_context = EVideoContext {
@@ -41,7 +34,7 @@ pub extern "C" fn _start() -> ! {
         VPUSetVMode(&mut video_context, EVideoScanoutEnable_EVS_Enable);
 
         let framebuffer = VPUAllocateBuffer((320 * 240) as u32);
-        let framebuffer_mem = slice::from_raw_parts_mut(framebuffer, 320 * 240);
+        let framebuffer_mem = core::slice::from_raw_parts_mut(framebuffer, 320 * 240);
 
         VPUSetWriteAddress(&mut video_context, framebuffer as u32);
         VPUSetScanoutAddress(&mut video_context, framebuffer as u32);

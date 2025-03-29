@@ -12,6 +12,7 @@ panic-halt = "1"
 
 [[bin]]
 name = "tinysys-rs-demo"
+path = "src/main.rs"
 test = false
 doctest = false
 bench = false
