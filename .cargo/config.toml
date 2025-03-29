@@ -1,2 +1,5 @@
+[target.riscv32im-unknown-none-elf]
+runner = ["tinysys-run", "../../cpp/tinysys/software/emulator/sdcard"]
+
 [build]
 target = "riscv32im-unknown-none-elf"

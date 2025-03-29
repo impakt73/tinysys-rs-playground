@@ -4,7 +4,7 @@
 
 extern crate panic_halt;
 
-use alloc::{alloc::alloc, format};
+use alloc::{alloc::alloc, slice};
 use riscv as _;
 
 extern crate alloc;
@@ -14,7 +14,7 @@ use embedded_alloc::LlffHeap as Heap;
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use core::ptr;
+use core::arch::asm;
 
 use tinysys_sys::*;
 
@@ -32,7 +32,6 @@ pub extern "C" fn _start() -> ! {
         unsafe { HEAP.init(HEAP_MEM.as_ptr() as usize, HEAP_SIZE) }
     }
 
-    let mut count = 0;
     unsafe {
         let mut video_context: EVideoContext = EVideoContext {
             m_vmode: 0,
@@ -53,35 +52,38 @@ pub extern "C" fn _start() -> ! {
             m_consoleColor: 0,
             m_caretBlink: 0,
         };
-        video_context.m_vmode = EVideoMode_EVM_640_Wide;
-        video_context.m_cmode = EColorMode_ECM_16bit_RGB;
+        video_context.m_vmode = EVideoMode_EVM_320_Wide;
+        video_context.m_cmode = EColorMode_ECM_8bit_Indexed;
         VPUSetVMode(&mut video_context, EVideoScanoutEnable_EVS_Enable);
 
-        let framebuffer_a = VPUAllocateBuffer((640 * 480 * 4) as u32);
-        let framebuffer_b = VPUAllocateBuffer((640 * 480 * 4) as u32);
+        let framebuffer = VPUAllocateBuffer((320 * 240) as u32);
+        let framebuffer_mem = slice::from_raw_parts_mut(framebuffer, 320 * 240);
 
-        let mut swap_context: EVideoSwapContext = EVideoSwapContext {
-            cycle: 0,
-            readpage: ptr::null_mut(),
-            writepage: ptr::null_mut(),
-            framebufferA: framebuffer_a,
-            framebufferB: framebuffer_b,
-        };
-        VPUSwapPages(&mut video_context, &mut swap_context);
+        VPUSetWriteAddress(&mut video_context, framebuffer as u32);
+        VPUSetScanoutAddress(&mut video_context, framebuffer as u32);
+        VPUClear(&mut video_context, 0x03030303);
 
+        for i in 0..=255 {
+            let x: u32 = i & 15;
+            let y: u32 = (i >> 4) & 3;
+            let z: u32 = x << (y << 2);
+            let r = z & 0xff;
+            let g = (z >> 4) & 0xff;
+            let b = (z >> 8) & 0xff;
+            VPUSetPal(i as u8, r, g, b);
+        }
+
+        let mut count = 0;
         loop {
-            VPUClear(&mut video_context, count);
+            let pixel_index = count % (320 * 240);
+            let color = count % 255;
 
-            VPUWaitVSync();
-            VPUSwapPages(&mut video_context, &mut swap_context);
+            framebuffer_mem[pixel_index] = color as u8;
 
-            VPUConsoleClear(&mut video_context);
-            let output = format!("Count: {}\n", count);
-            VPUConsolePrint(&mut video_context, output.as_ptr(), output.len() as i32);
+            // Flush CPU Data Cache
+            asm!(".word 0xFC000073");
 
             count += 1;
-
-            LEDSetState(count);
         }
     }
 }
