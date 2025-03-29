@@ -9,6 +9,8 @@ tinysys_sys = { git = "https://github.com/Chris--B/tinysys-sys.git" }
 riscv = { version = "0.13.0", features = ["critical-section-single-hart"] }
 embedded-alloc = "0.6.0"
 panic-halt = "1"
+fixed = "1"
+cordic = "0.1"
 
 [[bin]]
 name = "tinysys-rs-demo"

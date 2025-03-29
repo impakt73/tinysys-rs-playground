@@ -6,12 +6,23 @@ extern crate panic_halt;
 extern crate riscv;
 
 use embedded_alloc::LlffHeap as Heap;
+use fixed::{FixedI32, types::extra::U16};
 use tinysys_sys::*;
 
 use core::arch::asm;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
+
+const NUM_CHANNELS: u32 = 2;
+
+const BUFFER_SAMPLES: u32 = 512;
+
+type FixedFloat = FixedI32<U16>;
+
+unsafe fn flush_dcache() {
+    unsafe { asm!(".word 0xFC000073") };
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
@@ -26,6 +37,19 @@ pub extern "C" fn _start() -> ! {
     dbg!(HEAP.free() / 1024);
 
     unsafe {
+        let apu_buffer = APUAllocateBuffer(BUFFER_SAMPLES * NUM_CHANNELS * 2) as *mut i16;
+
+        let apu_buffer_mem =
+            core::slice::from_raw_parts_mut(apu_buffer, (BUFFER_SAMPLES * NUM_CHANNELS) as usize);
+
+        APUSetBufferSize(BUFFER_SAMPLES);
+
+        APUSetSampleRate(EAPUSampleRate_ASR_22_050_Hz);
+
+        let mut prev_frame = *IO_AUDIOOUT;
+
+        let mut offset = FixedFloat::from_num(0);
+
         let mut video_context = EVideoContext {
             m_vmode: EVideoMode_EVM_320_Wide,
             m_cmode: EColorMode_ECM_8bit_Indexed,
@@ -58,9 +82,40 @@ pub extern "C" fn _start() -> ! {
             framebuffer_mem[pixel_index] = color as u8;
 
             // Flush CPU Data Cache
-            asm!(".word 0xFC000073");
+            flush_dcache();
 
             count += 1;
+
+            let cur_frame = *IO_AUDIOOUT;
+
+            if prev_frame != cur_frame {
+                for i in 0..BUFFER_SAMPLES {
+                    apu_buffer_mem[(i * NUM_CHANNELS) as usize] = (FixedFloat::from_num(16384)
+                        * cordic::sin(
+                            offset
+                                + FixedFloat::from_num(2)
+                                    * FixedFloat::PI
+                                    * (FixedFloat::from_num(i) / FixedFloat::from_num(12)),
+                        ))
+                    .to_num();
+
+                    apu_buffer_mem[(i * NUM_CHANNELS + 1) as usize] = (FixedFloat::from_num(16384)
+                        * cordic::cos(
+                            offset
+                                + FixedFloat::from_num(2)
+                                    * FixedFloat::PI
+                                    * (FixedFloat::from_num(i * 2) / FixedFloat::from_num(38)),
+                        ))
+                    .to_num();
+                }
+
+                flush_dcache();
+
+                APUStartDMA(apu_buffer as u32);
+
+                prev_frame = cur_frame;
+                offset += FixedFloat::from_num(1);
+            }
         }
     }
 }
