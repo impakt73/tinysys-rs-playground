@@ -176,7 +176,7 @@ dependencies = [
 [[package]]
 name = "tinysys_sys"
 version = "0.1.0"
-source = "git+https://github.com/Chris--B/tinysys-sys.git#cc16b90f1845d547c4428d910fd0b13b68c15b5b"
+source = "git+https://github.com/Chris--B/tinysys-sys.git#69c67a9e509990076eece38b600e7ccb8621e4f8"
 
 [[package]]
 name = "unicode-ident"

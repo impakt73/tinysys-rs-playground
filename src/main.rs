@@ -33,27 +33,11 @@ pub extern "C" fn _start() -> ! {
     }
 
     unsafe {
-        let mut video_context: EVideoContext = EVideoContext {
-            m_vmode: 0,
-            m_cmode: 0,
-            m_scanEnable: 0,
-            m_strideInWords: 0,
-            m_scanoutAddressCacheAligned: 0,
-            m_cpuWriteAddressCacheAligned: 0,
-            m_graphicsWidth: 0,
-            m_graphicsHeight: 0,
-            m_consoleWidth: 0,
-            m_consoleHeight: 0,
-            m_cursorX: 0,
-            m_cursorY: 0,
-            m_consoleUpdated: 0,
-            m_caretX: 0,
-            m_caretY: 0,
-            m_consoleColor: 0,
-            m_caretBlink: 0,
+        let mut video_context = EVideoContext {
+            m_vmode: EVideoMode_EVM_320_Wide,
+            m_cmode: EColorMode_ECM_8bit_Indexed,
+            ..Default::default()
         };
-        video_context.m_vmode = EVideoMode_EVM_320_Wide;
-        video_context.m_cmode = EColorMode_ECM_8bit_Indexed;
         VPUSetVMode(&mut video_context, EVideoScanoutEnable_EVS_Enable);
 
         let framebuffer = VPUAllocateBuffer((320 * 240) as u32);
