@@ -1,15 +1,13 @@
 #![no_std]
 #![no_main]
+#![allow(clippy::identity_op)]
 
 extern crate alloc;
 extern crate panic_halt;
 extern crate riscv;
 
 use embedded_alloc::LlffHeap as Heap;
-use fixed::{FixedI32, types::extra::U16};
 use tinysys_sys::*;
-
-use core::arch::asm;
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -17,12 +15,6 @@ static HEAP: Heap = Heap::empty();
 const NUM_CHANNELS: u32 = 2;
 
 const BUFFER_SAMPLES: u32 = 512;
-
-type FixedFloat = FixedI32<U16>;
-
-unsafe fn flush_dcache() {
-    unsafe { asm!(".word 0xFC000073") };
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
@@ -39,7 +31,7 @@ pub extern "C" fn _start() -> ! {
     unsafe {
         let apu_buffer = APUAllocateBuffer(BUFFER_SAMPLES * NUM_CHANNELS * 2) as *mut i16;
 
-        let apu_buffer_mem =
+        let apu_buffer_mem: &mut [i16] =
             core::slice::from_raw_parts_mut(apu_buffer, (BUFFER_SAMPLES * NUM_CHANNELS) as usize);
 
         APUSetBufferSize(BUFFER_SAMPLES);
@@ -48,7 +40,7 @@ pub extern "C" fn _start() -> ! {
 
         let mut prev_frame = *IO_AUDIOOUT;
 
-        let mut offset = FixedFloat::from_num(0);
+        let mut offset = 0;
 
         let mut video_context = EVideoContext {
             m_vmode: EVideoMode_EVM_320_Wide,
@@ -82,39 +74,33 @@ pub extern "C" fn _start() -> ! {
             framebuffer_mem[pixel_index] = color as u8;
 
             // Flush CPU Data Cache
-            flush_dcache();
+            CFLUSH_D_L1();
 
             count += 1;
 
             let cur_frame = *IO_AUDIOOUT;
 
             if prev_frame != cur_frame {
-                for i in 0..BUFFER_SAMPLES {
-                    apu_buffer_mem[(i * NUM_CHANNELS) as usize] = (FixedFloat::from_num(16384)
-                        * cordic::sin(
-                            offset
-                                + FixedFloat::from_num(2)
-                                    * FixedFloat::PI
-                                    * (FixedFloat::from_num(i) / FixedFloat::from_num(12)),
-                        ))
-                    .to_num();
+                use core::f32::consts::*;
+                use micromath::F32Ext;
 
-                    apu_buffer_mem[(i * NUM_CHANNELS + 1) as usize] = (FixedFloat::from_num(16384)
-                        * cordic::cos(
-                            offset
-                                + FixedFloat::from_num(2)
-                                    * FixedFloat::PI
-                                    * (FixedFloat::from_num(i * 2) / FixedFloat::from_num(38)),
-                        ))
-                    .to_num();
+                for i in 0..BUFFER_SAMPLES {
+                    let ii = i as f32;
+                    let offset = offset as f32;
+
+                    let sample0 = 16384. * F32Ext::sin(offset + 2. * PI * ((1. * ii) / 12.));
+                    let sample1 = 16384. * F32Ext::cos(offset + 2. * PI * ((2. * ii) / 38.));
+
+                    apu_buffer_mem[(i * NUM_CHANNELS + 0) as usize] = sample0 as i16;
+                    apu_buffer_mem[(i * NUM_CHANNELS + 1) as usize] = sample1 as i16;
                 }
 
-                flush_dcache();
+                CFLUSH_D_L1();
 
                 APUStartDMA(apu_buffer as u32);
 
                 prev_frame = cur_frame;
-                offset += FixedFloat::from_num(1);
+                offset += 1;
             }
         }
     }

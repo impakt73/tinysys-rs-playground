@@ -10,7 +10,7 @@ riscv = { version = "0.13.0", features = ["critical-section-single-hart"] }
 embedded-alloc = "0.6.0"
 panic-halt = "1"
 fixed = "1"
-cordic = "0.1"
+micromath = "2"
 
 [[bin]]
 name = "tinysys-rs-demo"
