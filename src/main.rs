@@ -87,9 +87,10 @@ pub extern "C" fn _start() -> ! {
                 for i in 0..BUFFER_SAMPLES {
                     let ii = i as f32;
                     let offset = offset as f32;
+                    let buffer_sample_count = BUFFER_SAMPLES as f32;
 
-                    let sample0 = 16384. * F32Ext::sin(offset + 2. * PI * ((1. * ii) / (5. * 12.)));
-                    let sample1 = 16384. * F32Ext::cos(offset + 2. * PI * ((2. * ii) / (5. * 38.)));
+                    let sample0 = 16384. * F32Ext::sin((offset + ii / buffer_sample_count) * 30.);
+                    let sample1 = 16384. * F32Ext::cos((offset + ii / buffer_sample_count) * 40.);
 
                     apu_buffer_mem[(i * NUM_CHANNELS + 0) as usize] = sample0 as i16;
                     apu_buffer_mem[(i * NUM_CHANNELS + 1) as usize] = sample1 as i16;
