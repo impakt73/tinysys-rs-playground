@@ -38,7 +38,7 @@ pub extern "C" fn _start() -> ! {
 
         APUSetSampleRate(EAPUSampleRate_ASR_22_050_Hz);
 
-        let mut prev_frame = *IO_AUDIOOUT;
+        let mut prev_frame = APUFrame();
 
         let mut offset = 0;
 
@@ -78,7 +78,7 @@ pub extern "C" fn _start() -> ! {
 
             count += 1;
 
-            let cur_frame = *IO_AUDIOOUT;
+            let cur_frame = APUFrame();
 
             if prev_frame != cur_frame {
                 use core::f32::consts::*;
