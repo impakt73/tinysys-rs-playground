@@ -1,3 +1,3 @@
-# tinysys-rs-demo
+# tinysys-rs-playground
 
-Rust Based Demo for TinySys Platform
+Rust Based Playground for TinySys Platform

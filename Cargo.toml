@@ -1,7 +1,6 @@
 [package]
-name = "tinysys-rs-demo"
+name = "tinysys-rs-playground"
 version = "0.1.0"
-authors = ["Gregory Mitrano <gregory.mitrano@gmail.com>"]
 edition = "2024"
 
 [dependencies]
@@ -12,7 +11,7 @@ panic-halt = "1"
 micromath = "2"
 
 [[bin]]
-name = "tinysys-rs-demo"
+name = "tinysys-rs-playground"
 path = "src/main.rs"
 test = false
 doctest = false
