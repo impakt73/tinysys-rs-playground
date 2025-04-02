@@ -1,5 +1,8 @@
 [target.riscv32im-unknown-none-elf]
 runner = ["tinysys-run", "../../cpp/tinysys/software/emulator/sdcard"]
+rustflags = [
+    "-C", "target-feature=+zicsr,+zifencei,+zfinx",
+]
 
 [build]
 target = "riscv32im-unknown-none-elf"
